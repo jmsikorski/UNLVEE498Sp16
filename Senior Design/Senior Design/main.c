@@ -16,7 +16,9 @@ int main(void)
 	{
 		read_temp(temp);
 		DDRD = 0xFF;
-		DDRD = temp % 255;
+		DDRB = 0xFF;
+		PORTD = temp % 256;
+		PORTB = temp / 256;
 	}
 	return 0;
 }
