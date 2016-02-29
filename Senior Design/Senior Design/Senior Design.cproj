@@ -28,50 +28,23 @@
     <eraseonlaunchrule>0</eraseonlaunchrule>
     <AsfFrameworkConfig>
       <framework-data xmlns="">
-  <options />
-  <configurations />
-  <files />
-  <documentation help="" />
-  <offline-documentation help="" />
-  <dependencies>
-    <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.28.1" />
-  </dependencies>
-</framework-data>
+        <options />
+        <configurations />
+        <files />
+        <documentation help="" />
+        <offline-documentation help="" />
+        <dependencies>
+          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.28.1" />
+        </dependencies>
+      </framework-data>
     </AsfFrameworkConfig>
     <avrtool>com.atmel.avrdbg.tool.stk600</avrtool>
     <avrtoolserialnumber>004CE1745EC9</avrtoolserialnumber>
     <avrdeviceexpectedsignature>0x1E9801</avrdeviceexpectedsignature>
-    <com_atmel_avrdbg_tool_simulator>
-      <ToolOptions>
-        <InterfaceProperties>
-        </InterfaceProperties>
-        <InterfaceName>
-        </InterfaceName>
-      </ToolOptions>
-      <ToolType>com.atmel.avrdbg.tool.simulator</ToolType>
-      <ToolNumber>
-      </ToolNumber>
-      <ToolName>Simulator</ToolName>
-    </com_atmel_avrdbg_tool_simulator>
-    <avrtoolinterface />
-    <com_atmel_avrdbg_tool_stk500>
-      <ToolOptions xmlns="">
-        <InterfaceProperties>
-        </InterfaceProperties>
-        <InterfaceName>
-        </InterfaceName>
-      </ToolOptions>
-      <ToolType xmlns="">com.atmel.avrdbg.tool.stk500</ToolType>
-      <ToolNumber xmlns="">
-      </ToolNumber>
-      <ToolName xmlns="">STK500</ToolName>
-    </com_atmel_avrdbg_tool_stk500>
     <com_atmel_avrdbg_tool_stk600>
       <ToolOptions xmlns="">
         <InterfaceProperties>
         </InterfaceProperties>
-        <InterfaceName>
-        </InterfaceName>
       </ToolOptions>
       <ToolType xmlns="">com.atmel.avrdbg.tool.stk600</ToolType>
       <ToolNumber xmlns="">004CE1745EC9</ToolNumber>
