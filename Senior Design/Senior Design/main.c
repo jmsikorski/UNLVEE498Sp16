@@ -49,7 +49,7 @@ int main(void)
 		{
 			dylos[strlen(dylos)] = rec;
 			rec_flag = 0;
-			if(dylos[strlen[dylos] = '\n')
+			if(dylos[strlen(dylos)] == '\n')
 			{
 				usart_send(0, dylos);
 				for(int i = strlen(dylos); i > 0; i--)
