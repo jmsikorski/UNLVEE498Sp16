@@ -21,13 +21,13 @@ void usart_init(int);
 void usart_send(int, char*);	
 void usart_rec(int, char*);
 
-char volatile rec;
-char volatile rec_flag;
+char volatile rec_dylos[10];
+char volatile rec_dylos_flag = 0;;
 
 ISR(USART0_RX_vect)
 {
-	rec = UDR0;
-	rec_flag = 1;
+	rec_dylos[strlen(rec_dylos)] = UDR0;
+	rec_dylos_flag = 1;
 }
 
 int main(void)
@@ -37,30 +37,25 @@ int main(void)
 	DDRD = 0XFF;
 	DDRF = 0;
 	DDRA = 0;
-	char buffer[100] = "hello - ";
+	char buffer[10];
 	char dylos[10];
-//	char a = 0x00;
 	usart_init(0);
 	sei();
 	
     while (1) 
     {
-		if(rec_flag)
+		_delay_ms(1000);
+		if(rec_dylos_flag == 1)
 		{
-			dylos[strlen(dylos)] = rec;
-			rec_flag = 0;
-			if(dylos[strlen(dylos)] == '\n')
+			rec_dylos_flag = 0;
+			if(rec_dylos[strlen(rec_dylos) - 1] == '\n')
 			{
-				usart_send(0, dylos);
-				for(int i = strlen(dylos); i > 0; i--)
-				{
-					dylos[i-1] = 0;
-				}
+				strncpy(dylos, rec_dylos, strlen(rec_dylos));
+				for(int i = strlen(rec_dylos); i > 0; i--)
+					rec_dylos[i-1] = 0;
 			}
 		}
-		_delay_ms(1000);
-		usart_send(0,buffer);
-    }
+	}
 	return 0;
 }
 void read_dylos(char* data)
