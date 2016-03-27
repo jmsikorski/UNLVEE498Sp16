@@ -6,20 +6,17 @@
  */ 
 #define F_CPU 8000000UL
 #include <avr/io.h>
-#include <util/delay.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <avr/interrupt.h>
 
-void read_dylos(char*);
 void read_temp(char*);
 void read_MQ2(char*);
 void read_MQ5(char*);
 void read_MQ7(char*);
 void usart_init(int);
 void usart_send(int, char*);	
-void usart_rec(int, char*);
 void parse_GPS(char*, char*);
 void parse_dylos(char*, char*);
 void strclr(char*);
@@ -44,11 +41,7 @@ ISR(USART1_RX_vect)
 
 int main(void)
 {
-	DDRB = 0xFF;
-	DDRC = 0xFF;
-	DDRD = 0XFF;
 	DDRF = 0;
-	DDRA = 0;
 	char GPS[100];
 	char dylos[10];
 	char GPS_line = 0;
@@ -62,7 +55,6 @@ int main(void)
 	usart_init(2);
 	usart_init(3);
 	init_GPS();
-	int a = 0;
 	sei();
 
     while (1) 
@@ -138,7 +130,7 @@ void read_MQ2(char* buffer) //C3H8 sensor
 	char temp[10];
 	double t; // solution variable
 	int RO = 6600; // Output Resistance
-	int RL = 9880; // Load Resistance
+	int RL = 9900; // Load Resistance
 	float y = 0; // Rs/R0 variable
 	float RS = 0; // Variable resistance
 	float m = -0.00025; // slope
@@ -169,7 +161,7 @@ void read_MQ5(char* buffer) // CH4 sensor
 	char temp[10];
 	double t; // solution variable
 	int RO = 15750; // Output Resistance
-	int RL = 19790; // Load Resistance
+	int RL = 19800; // Load Resistance
 	float y = 0; // Rs/R0 variable
 	float RS = 0; // Variable resistance
 	float m = -0.000361; // slope
@@ -200,7 +192,7 @@ void read_MQ7(char* buffer) //C0 sensor
 	char temp[10];
 	double t; // solution variable
 	int RO = 2000; // Output Resistance
-	int RL = 9880; // Load Resistance
+	int RL = 9900; // Load Resistance
 	float y = 0; // Rs/R0 variable
 	float RS = 0; // Variable resistance
 	float m = -0.001298; // slope
@@ -300,7 +292,7 @@ void parse_GPS(char* in, char* out)
 	{
 		while(comma < 12)
 		{
-			if(in[p] == 44)
+			if(in[p] == ',')
 			{
 				comma++;
 				p++;
