@@ -68,6 +68,8 @@
   <avrgcc.linker.libraries.Libraries>
     <ListValues>
       <Value>libm</Value>
+      <Value>libscanf_flt</Value>
+      <Value>libscanf_min</Value>
     </ListValues>
   </avrgcc.linker.libraries.Libraries>
 </AvrGcc>
@@ -103,6 +105,8 @@
   <avrgcc.linker.libraries.Libraries>
     <ListValues>
       <Value>libm</Value>
+      <Value>libscanf_flt</Value>
+      <Value>libscanf_min</Value>
     </ListValues>
   </avrgcc.linker.libraries.Libraries>
   <avrgcc.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcc.assembler.debugging.DebugLevel>

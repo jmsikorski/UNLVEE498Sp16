@@ -4,17 +4,14 @@
  * Created: 2/27/2016 7:15:24 PM
  * Author : jmsikorski
  */ 
-//#define F_CPU 8000000UL
 #include <avr/io.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <avr/interrupt.h>
-//#include <util/delay.h>
 #include "ff.h"
-//#include "diskio.h"
 
-void sd_write(char*, FIL*);
+void sd_write(char*, FIL*, char*);
 int read_temp();
 int read_MQ2();
 int read_MQ5();
@@ -34,6 +31,7 @@ char volatile rec_dylos_flag = 0;
 char volatile rec_GPS[100];
 char volatile rec_GPS_flag = 0;
 char volatile ov_flag = 0;
+char fil_nm[15] = {0};
 
 ISR(USART0_RX_vect)
 {
@@ -61,11 +59,11 @@ int main(void)
 	char GPS_line = 0;
 	char dylos_line = 0;
 	char buffer[150];
-	int GPS_data[12];
+	int GPS_data[15];
 	int dylos_data[2];
 	int C3H8, CH4, CO, H2S, F;
 	char new_GPS_data = 0;
-	char new_dylos_data = 0;	
+	char new_dylos_data = 0;
 
 	int ppm2[151];
 	ppm2[0] =	10478;
@@ -744,110 +742,114 @@ int main(void)
 			if(new_GPS_data == 1)
 			{
 				if(GPS_data[9] == 1)
-					sprintf(buffer, "Time: %.2d:%.2d:%.2d\nLatitude: %d %d.%d\nLongitude: %d %d.%d\nAltitude %d.%d\n", GPS_data[0], GPS_data[1], GPS_data[2], GPS_data[3], GPS_data[4], GPS_data[5], GPS_data[6], GPS_data[7], GPS_data[8], GPS_data[10], GPS_data[11]);
+					sprintf(buffer, "Date: %.2d/%.2d/%.2d\nTime: %.2d:%.2d:%.2d\nLatitude: %d %d.%d\nLongitude: %d %d.%d\nAltitude %d.%d\n", GPS_data[12], GPS_data[13], GPS_data[14], GPS_data[0], GPS_data[1], GPS_data[2], GPS_data[3], GPS_data[4], GPS_data[5], GPS_data[6], GPS_data[7], GPS_data[8], GPS_data[10], GPS_data[11]);
 				else
 					sprintf(buffer, "Time: %.2d:%.2d:%.2d\nNO GPS DATA AVAILABLE\n", GPS_data[0], GPS_data[1], GPS_data[2]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil);
+				sd_write(buffer, &Fil, fil_nm);
 				new_GPS_data = 0;
 			}
 			if(new_dylos_data == 1)
 			{
 				sprintf(buffer, "Small: %d\n Large: %d\n", dylos_data[0], dylos_data[1]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil);
+				sd_write(buffer, &Fil, fil_nm);
 				new_dylos_data = 0;
 			}
 			F = read_temp();
 			sprintf(buffer, "Temperature %dF\n", F);
 			usart_send(3, buffer);
-			sd_write(buffer, &Fil);			
+			sd_write(buffer, &Fil, fil_nm);			
 			C3H8 = read_MQ2();
 			if(C3H8 < -1)
 			{
 				usart_send(3, "C3H8: ERROR - MQ2 reading out of range\n");
-				sd_write("C3H8: ERROR - MQ2 reading out of range\n", &Fil);
+				sd_write("C3H8: ERROR - MQ2 reading out of range\n", &Fil, fil_nm);
 			}
 			else if(C3H8 == -1)
 			{
 				sprintf(buffer, "C3H8: %d ppm \n",0);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil);
+				sd_write(buffer, &Fil, fil_nm);
 			}
 			else
 			{
 				sprintf(buffer, "C3H8: %d ppm \n",ppm2[C3H8]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil);
+				sd_write(buffer, &Fil, fil_nm);
 			}
 			CH4 = read_MQ5();
 			if(CH4 < -1)
 			{
 				usart_send(3, "CH4 : ERROR - MQ5 reading out of range\n");
-				sd_write("CH4 : ERROR - MQ5 reading out of range\n", &Fil);
+				sd_write("CH4 : ERROR - MQ5 reading out of range\n", &Fil, fil_nm);
 			}
 			else if(CH4 == -1)
 			{
 				sprintf(buffer, "CH4 : %d ppm \n",0);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil);
+				sd_write(buffer, &Fil, fil_nm);
 			}
 			else
 			{
 				sprintf(buffer, "CH4 : %d ppm \n",ppm5[CH4]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil);
+				sd_write(buffer, &Fil, fil_nm);
 			}
 			CO = read_MQ7();
 			if(CO < -1)
 			{
 				usart_send(3, "CO  : ERROR - MQ7 reading out of range\n");
-				sd_write("CO  : ERROR - MQ7 reading out of range\n", &Fil);
+				sd_write("CO  : ERROR - MQ7 reading out of range\n", &Fil, fil_nm);
 			}
 			else if(CO == -1)
 			{
 				sprintf(buffer, "CO  : %d ppm \n",0);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil);
+				sd_write(buffer, &Fil, fil_nm);
 			}
 			else
 			{
 				sprintf(buffer, "CO  : %d ppm \n",ppm7[CO]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil);
+				sd_write(buffer, &Fil, fil_nm);
 			}			
 			H2S = read_MQ136();
 			if(H2S < -1)
 			{
 				usart_send(3, "H2S : ERROR - MQ136 reading out of range\n\n");
-				sd_write("H2S : ERROR - MQ136 reading out of range\n\n", &Fil);
+				sd_write("H2S : ERROR - MQ136 reading out of range\n\n", &Fil, fil_nm);
 			}
 			else if(H2S == -1)
 			{
 				sprintf(buffer, "H2S : %d ppm \n\n",0);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil);
+				sd_write(buffer, &Fil, fil_nm);
 			}
 			else
 			{
 				sprintf(buffer, "H2S : %d ppm \n\n",ppm136[H2S]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil);
-			}		}
+				sd_write(buffer, &Fil, fil_nm);
+			}
+		}
 	}
 	return 0;
 }
 
-void sd_write(char* buffer, FIL* Fil)
+void sd_write(char* buffer, FIL* Fil, char* fil_nm)
 {
-	FRESULT fr;
-	UINT bw;
-	fr = f_open(Fil, "dronedat.txt", FA_WRITE | FA_OPEN_ALWAYS);	/* Create a file */
-	if(fr)
-		usart_send(3, "\nERROR: Unable to write to SD card\n");
-	f_lseek(Fil, f_size(Fil));
-	f_write(Fil, buffer, strlen(buffer), &bw);
-	f_close(Fil);								/* Close the file */
+	if(fil_nm[0] != 0)
+	{
+		FRESULT fr;
+		UINT bw;
+		fr = f_open(Fil, fil_nm, FA_WRITE | FA_OPEN_ALWAYS);	/* Create a file */
+		if(fr)
+			usart_send(3, "\nERROR: Unable to write to SD card\n");
+		f_lseek(Fil, f_size(Fil));
+		f_write(Fil, buffer, strlen(buffer), &bw);
+		f_close(Fil);								/* Close the file */
+	}
 }
 
 int read_temp()
@@ -865,7 +867,7 @@ int read_temp()
 
 int read_MQ2() //C3H8 sensor
 {
-	long rs = -1;
+	double rs = -1;
 	int adc = 0;
 	int RL = 9800;
 	int RO = 6600;
@@ -895,7 +897,7 @@ int read_MQ2() //C3H8 sensor
 
 int read_MQ5() // CH4 sensor
 {
-	long rs = -1;
+	double rs = -1;
 	int adc = 0;
 	int RL = 19900;
 	int RO = 15750;
@@ -927,7 +929,7 @@ int read_MQ5() // CH4 sensor
 
 int read_MQ7() //C0 sensor
 {
-	long rs = -1;
+	double rs = -1;
 	int adc = 0;
 	int RL = 9900;
 	int RO = 2000;
@@ -957,7 +959,7 @@ int read_MQ7() //C0 sensor
 
 int read_MQ136() //H2S sensor
 {
-	long rs = -1;
+	double rs = -1;
 	int adc = 0;
 	int RL = 19600;
 	int RO = 4150;
@@ -1050,126 +1052,106 @@ void usart_send (int n, char* data)
 
 void parse_GPS(char* in, int* GPS_data)
 {
-	int p = 0;
-	int comma = 0;
-	int i = 0;
 	int fix = 0;
-	int hour, min, sec, latd, lats, latm, lond, lonm, lons, ns, ew, alt1, alt2;
-	char temp[20];
-	if(in[1] == 'G')
+	int min, sec, latd, lats, latm, lond, lonm, lons, alt1, alt2;
+	long hour;
+	char ns, ew;
+	int temp;
+	if(in[3] == 'G')
 	{
-		while(comma < 12)
+		sscanf(in, "$GPGGA,%ld.%d,%d.%d,%c,%d.%d,%c,%d,%d,%d.%d,%d.%d",&hour, &temp, &latd, &lats, &ns, &lond, &lons, &ew, &fix, &temp, &temp, &temp,&alt1, &alt2);
+		latm = latd % 100;
+		latd /= 100;
+		lonm = lond % 100;
+		lond /= 100;
+		sec = hour % 100;
+		hour /= 100;
+		min = hour % 100;
+		hour /= 100;
+
+		if(hour > 6)
+		hour = hour-7;
+		else
+		hour = hour + 17;
+		if(fix == 1)
 		{
-			if(in[p] == ',')
+			if(ns == 'S')
+				latd = -latd;
+			if(ew == 'W')
+				lond = -lond;
+		}
+		GPS_data[0] = hour;
+		GPS_data[1] = min;
+		GPS_data[2] = sec;
+		GPS_data[3]	= latd;
+		GPS_data[4] = latm;
+		GPS_data[5] = lats;
+		GPS_data[6] = lond;
+		GPS_data[7] = lonm;
+		GPS_data[8] = lons;
+		GPS_data[9] = fix;
+		GPS_data[10] = alt1;
+		GPS_data[11] = alt2;
+	}
+	else if(in[3] == 'R')
+	{
+		sscanf(in, "$GPRMC,%ld", &hour);
+		sec = hour % 100;
+		hour /= 100;
+		min = hour % 100;
+		hour /= 100;
+
+		if(hour > 6)
+		hour = hour-7;
+		else
+		hour = hour + 17;
+		GPS_data[0] = hour;
+		GPS_data[1] = min;
+		GPS_data[2] = sec;	
+
+		int i = 0;
+		int comma = 9;
+		char temp[3];
+		FRESULT fr;
+		while(comma > 7)
+		{
+			while(in[i] != ',')
+				i++;
+			comma--;
+			i++;
+		}
+		if(in[i] == 'A')
+		{
+			GPS_data[9] = 1;
+			while(comma > 0)
 			{
-				comma++;
-				p++;
-				switch(comma)
-				{
-					case 1:
-						temp[0] = in[p++];
-						temp[1] = in[p++];
-						temp[2] = ':';
-						temp[3] = in[p++];
-						temp[4] = in[p++];
-						temp[5] = ':';
-						temp[6] = in[p++];
-						temp[7] = in[p++];
-						temp[8] = 0;
-						sscanf(temp,"%d:%d:%d",&hour,&min,&sec);
-						if(hour > 6)
-							hour = hour-7;
-						else
-							hour = hour + 17;
-						break;
-					case 2:
-						temp[0] = in[p++];
-						temp[1] = in[p++];
-						temp[2] = '.';
-						temp[3] = in[p++];
-						temp[4] = in[p++];
-						temp[5] = in[p++];
-						temp[6] = in[p++];
-						temp[7] = in[p++];
-						temp[8] = in[p++];
-						temp[9] = in[p++];
-						temp[10] = 0;
-						sscanf(temp, "%d.%d.%d", &latd, &latm, &lats);
-						break;
-					case 3:
-						if(in[p++] == 'N')
-							ns = 0;
-						else
-							ns = 1;
-						break;
-					case 4:
-						temp[0] = in[p++];
-						temp[1] = in[p++];
-						temp[2] = in[p++];
-						temp[3] = '.';
-						temp[4] = in[p++];
-						temp[5] = in[p++];
-						temp[6] = in[p++];
-						temp[7] = in[p++];
-						temp[8] = in[p++];
-						temp[9] = in[p++];
-						temp[10] = in[p++];
-						temp[11] = 0;
-						sscanf(temp, "%d.%d.%d", &lond, &lonm, &lons);
-						break;
-					case 5:
-						if(in[p++] == 'E')
-							ew = 0;
-						else
-							ew = 1;
-						break;
-					case 6:
-						if(in[p++] == '1')
-							fix = 1;
-						else
-							fix = 0;
-						break;
-					case 9:
-						while(in[p] != ',')
-						{
-							temp[i] = in[p++];
-							i++;
-						}
-						temp[i] = 0;
-						sscanf(temp, "%d.%d", &alt1, &alt2);
-						break;
-				}
+				while(in[i] != ',')
+					i++;
+				comma--;
+				i++;
 			}
-			else
-				p++;
+			temp[0] = in[i++];
+			temp[1] = in[i++];
+			temp[2] = 0;
+			sscanf(temp, "%d", &GPS_data[13]);
+			temp[0] = in[i++];
+			temp[1] = in[i++];
+			temp[2] = 0;
+			sscanf(temp, "%d", &GPS_data[12]);
+			temp[0] = in[i++];
+			temp[1] = in[i++];
+			temp[2] = 0;
+			sscanf(temp, "%d", &GPS_data[14]);
+			usart_send(1,"$PMTK314,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*29\r\n");
+			i = 0;
+			do 
+			{
+				sprintf(fil_nm, "d%.2d%.2d%d.txt",GPS_data[12],GPS_data[13],i);
+				fr = f_open(&Fil, fil_nm, FA_WRITE | FA_CREATE_NEW);
+				i++;
+			} while (fr);
 		}
 	}
-	else
-		return;
-	if(fix == 1)
-	{
-		if(ns == 1 && ew == 0)
-			latd = -latd;
-		else if(ns == 0 && ew == 1)
-			lond = -lond;
-		else if(ns == 1 && ew == 1)
-		{
-			latd = -latd;
-			lond = -lond;
-		}
-	}
-	GPS_data[0] = hour;
-	GPS_data[1] = min;
-	GPS_data[2] = sec;
-	GPS_data[3]	= latd;
-	GPS_data[4] = latm;
-	GPS_data[5] = lats;
-	GPS_data[6] = lond;
-	GPS_data[7] = lonm;
-	GPS_data[8] = lons;
-	GPS_data[9] = fix;
-	GPS_data[10] = alt1;
-	GPS_data[11] = alt2;
 	return;
 }
 
@@ -1192,6 +1174,6 @@ void init_GPS()
 {
 	usart_send(1,"$PGCMD,33,0*6D\r\n");
 	usart_send(1,"$PMTK220,1000*1F\r\n");
-	usart_send(1,"$PMTK314,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*29\r\n");
+	usart_send(1,"$PMTK314,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*29\r\n");
 	return;
 }
