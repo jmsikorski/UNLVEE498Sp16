@@ -11,7 +11,7 @@
 #include <avr/interrupt.h>
 #include "ff.h"
 
-void sd_write(char*, FIL*, char*);
+void sd_write(char*, FIL*, char*, int);
 int read_temp();
 int read_MQ2();
 int read_MQ5();
@@ -31,7 +31,7 @@ char volatile rec_dylos_flag = 0;
 char volatile rec_GPS[100];
 char volatile rec_GPS_flag = 0;
 char volatile ov_flag = 0;
-char fil_nm[15] = {0};
+char fil_nm[15];
 
 ISR(USART0_RX_vect)
 {
@@ -64,6 +64,7 @@ int main(void)
 	int C3H8, CH4, CO, H2S, F;
 	char new_GPS_data = 0;
 	char new_dylos_data = 0;
+	FRESULT fr;
 
 	int ppm2[151];
 	ppm2[0] =	10478;
@@ -695,7 +696,14 @@ int main(void)
 	usart_init(2);
 	usart_init(3);
 	init_GPS();
+	F = 0;
 	f_mount(&FatFs, "", 0);		/* Give a work area to the default drive */
+	do
+	{
+		sprintf(fil_nm, "data%d.txt",F);
+		fr = f_open(&Fil, fil_nm, FA_WRITE | FA_CREATE_NEW);
+		F++;
+	} while (fr);
 	sei();
 
     while (1) 
@@ -746,100 +754,100 @@ int main(void)
 				else
 					sprintf(buffer, "Time: %.2d:%.2d:%.2d\nNO GPS DATA AVAILABLE\n", GPS_data[0], GPS_data[1], GPS_data[2]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm);
+				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
 				new_GPS_data = 0;
 			}
 			if(new_dylos_data == 1)
 			{
 				sprintf(buffer, "Small: %d\n Large: %d\n", dylos_data[0], dylos_data[1]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm);
+				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
 				new_dylos_data = 0;
 			}
 			F = read_temp();
 			sprintf(buffer, "Temperature %dF\n", F);
 			usart_send(3, buffer);
-			sd_write(buffer, &Fil, fil_nm);			
+			sd_write(buffer, &Fil, fil_nm, GPS_data[9]);			
 			C3H8 = read_MQ2();
 			if(C3H8 < -1)
 			{
 				usart_send(3, "C3H8: ERROR - MQ2 reading out of range\n");
-				sd_write("C3H8: ERROR - MQ2 reading out of range\n", &Fil, fil_nm);
+				sd_write("C3H8: ERROR - MQ2 reading out of range\n", &Fil, fil_nm, GPS_data[9]);
 			}
 			else if(C3H8 == -1)
 			{
 				sprintf(buffer, "C3H8: %d ppm \n",0);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm);
+				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
 			}
 			else
 			{
 				sprintf(buffer, "C3H8: %d ppm \n",ppm2[C3H8]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm);
+				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
 			}
 			CH4 = read_MQ5();
 			if(CH4 < -1)
 			{
 				usart_send(3, "CH4 : ERROR - MQ5 reading out of range\n");
-				sd_write("CH4 : ERROR - MQ5 reading out of range\n", &Fil, fil_nm);
+				sd_write("CH4 : ERROR - MQ5 reading out of range\n", &Fil, fil_nm, GPS_data[9]);
 			}
 			else if(CH4 == -1)
 			{
 				sprintf(buffer, "CH4 : %d ppm \n",0);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm);
+				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
 			}
 			else
 			{
 				sprintf(buffer, "CH4 : %d ppm \n",ppm5[CH4]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm);
+				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
 			}
 			CO = read_MQ7();
 			if(CO < -1)
 			{
 				usart_send(3, "CO  : ERROR - MQ7 reading out of range\n");
-				sd_write("CO  : ERROR - MQ7 reading out of range\n", &Fil, fil_nm);
+				sd_write("CO  : ERROR - MQ7 reading out of range\n", &Fil, fil_nm, GPS_data[9]);
 			}
 			else if(CO == -1)
 			{
 				sprintf(buffer, "CO  : %d ppm \n",0);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm);
+				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
 			}
 			else
 			{
 				sprintf(buffer, "CO  : %d ppm \n",ppm7[CO]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm);
+				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
 			}			
 			H2S = read_MQ136();
 			if(H2S < -1)
 			{
 				usart_send(3, "H2S : ERROR - MQ136 reading out of range\n\n");
-				sd_write("H2S : ERROR - MQ136 reading out of range\n\n", &Fil, fil_nm);
+				sd_write("H2S : ERROR - MQ136 reading out of range\n\n", &Fil, fil_nm, GPS_data[9]);
 			}
 			else if(H2S == -1)
 			{
 				sprintf(buffer, "H2S : %d ppm \n\n",0);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm);
+				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
 			}
 			else
 			{
 				sprintf(buffer, "H2S : %d ppm \n\n",ppm136[H2S]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm);
+				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
 			}
 		}
 	}
 	return 0;
 }
 
-void sd_write(char* buffer, FIL* Fil, char* fil_nm)
+void sd_write(char* buffer, FIL* Fil, char* fil_nm, int fix)
 {
-	if(fil_nm[0] != 0)
+	if(fix == 1)
 	{
 		FRESULT fr;
 		UINT bw;
@@ -1112,7 +1120,6 @@ void parse_GPS(char* in, int* GPS_data)
 		int i = 0;
 		int comma = 9;
 		char temp[3];
-		FRESULT fr;
 		while(comma > 7)
 		{
 			while(in[i] != ',')
@@ -1142,14 +1149,10 @@ void parse_GPS(char* in, int* GPS_data)
 			temp[1] = in[i++];
 			temp[2] = 0;
 			sscanf(temp, "%d", &GPS_data[14]);
-			usart_send(1,"$PMTK314,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*29\r\n");
-			i = 0;
-			do 
-			{
-				sprintf(fil_nm, "d%.2d%.2d%d.txt",GPS_data[12],GPS_data[13],i);
-				fr = f_open(&Fil, fil_nm, FA_WRITE | FA_CREATE_NEW);
-				i++;
-			} while (fr);
+			if(GPS_data[12] > 0 && GPS_data[12] < 13)
+				usart_send(1,"$PMTK314,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*29\r\n");
+			if(hour > 16 && hour < 24)
+				GPS_data[13]--;
 		}
 	}
 	return;
