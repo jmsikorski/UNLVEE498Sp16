@@ -11,7 +11,7 @@
 #include <avr/interrupt.h>
 #include "ff.h"
 
-void sd_write(char*, FIL*, char*, int);
+int sd_write(char*, FIL*, char*, int);
 int read_temp();
 int read_MQ2();
 int read_MQ5();
@@ -58,7 +58,8 @@ int main(void)
 	char dylos[10];
 	char GPS_line = 0;
 	char dylos_line = 0;
-	char buffer[150];
+	char sd_buff[150];
+	char buffer[30];
 	int GPS_data[15];
 	int dylos_data[2];
 	int C3H8, CH4, CO, H2S, F;
@@ -697,17 +698,22 @@ int main(void)
 	usart_init(3);
 	init_GPS();
 	F = 0;
+	int f_num = 0;
+	char sd_valid = 0;
 	f_mount(&FatFs, "", 0);		/* Give a work area to the default drive */
-	do
-	{
-		sprintf(fil_nm, "data%d.txt",F);
-		fr = f_open(&Fil, fil_nm, FA_WRITE | FA_CREATE_NEW);
-		F++;
-	} while (fr);
 	sei();
 
     while (1) 
 	{
+		if(sd_valid == 0)
+		{
+			sprintf(fil_nm, "data%d.txt",f_num);
+			if((fr = f_open(&Fil, fil_nm, FA_WRITE | FA_CREATE_NEW)) && f_num < 9999)
+				f_num++;
+			else
+				sd_valid = 1;
+		}
+
 		if(rec_dylos_flag == 1)
 		{
 			rec_dylos_flag = 0;
@@ -750,114 +756,131 @@ int main(void)
 			if(new_GPS_data == 1)
 			{
 				if(GPS_data[9] == 1)
-					sprintf(buffer, "Date: %.2d/%.2d/%.2d\nTime: %.2d:%.2d:%.2d\nLatitude: %d %d.%d\nLongitude: %d %d.%d\nAltitude %d.%d\n", GPS_data[12], GPS_data[13], GPS_data[14], GPS_data[0], GPS_data[1], GPS_data[2], GPS_data[3], GPS_data[4], GPS_data[5], GPS_data[6], GPS_data[7], GPS_data[8], GPS_data[10], GPS_data[11]);
+				{
+					sprintf(sd_buff, "Date: %.2d/%.2d/%.2d\nTime: %.2d:%.2d:%.2d\nLatitude: %d %d.%d\nLongitude: %d %d.%d\nAltitude %d.%d\n", GPS_data[12], GPS_data[13], GPS_data[14], GPS_data[0], GPS_data[1], GPS_data[2], GPS_data[3], GPS_data[4], GPS_data[5], GPS_data[6], GPS_data[7], GPS_data[8], GPS_data[10], GPS_data[11]);
+					sprintf(buffer,"%.2d:%.2d:%.2d,%d,%d.%d,%d,%d.%d,%d.%d,",GPS_data[0], GPS_data[1], GPS_data[2], GPS_data[3], GPS_data[4], GPS_data[5], GPS_data[6], GPS_data[7], GPS_data[8], GPS_data[10], GPS_data[11]);
+				}
 				else
-					sprintf(buffer, "Time: %.2d:%.2d:%.2d\nNO GPS DATA AVAILABLE\n", GPS_data[0], GPS_data[1], GPS_data[2]);
+				{
+					sprintf(sd_buff, "Time: %.2d:%.2d:%.2d\nNO GPS DATA AVAILABLE\n", GPS_data[0], GPS_data[1], GPS_data[2]);
+					sprintf(buffer,"%.2d:%.2d:%.2d,0,0.0,0,0.0,0.0,", GPS_data[0], GPS_data[1], GPS_data[2]);
+				}
+				sd_write(sd_buff, &Fil, fil_nm, sd_valid);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
 				new_GPS_data = 0;
 			}
+			else
+				usart_send(3,"00:00:00,0,0.0,0,0.0,0.0,");
 			if(new_dylos_data == 1)
 			{
-				sprintf(buffer, "Small: %d\n Large: %d\n", dylos_data[0], dylos_data[1]);
+				sprintf(sd_buff, "Small: %d\n Large: %d\n", dylos_data[0], dylos_data[1]);
+				sprintf(buffer, "%d,%d", dylos_data[0], dylos_data[1]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
+				sd_write(sd_buff, &Fil, fil_nm, sd_valid);
 				new_dylos_data = 0;
 			}
+			else
+				usart_send(3,"0,0,");			
 			F = read_temp();
-			sprintf(buffer, "Temperature %dF\n", F);
+			sprintf(sd_buff, "Temperature %dF\n", F);
+			sprintf(buffer, "%d,", F);
 			usart_send(3, buffer);
-			sd_write(buffer, &Fil, fil_nm, GPS_data[9]);			
+			sd_write(sd_buff, &Fil, fil_nm, sd_valid);			
 			C3H8 = read_MQ2();
 			if(C3H8 < -1)
 			{
-				usart_send(3, "C3H8: ERROR - MQ2 reading out of range\n");
-				sd_write("C3H8: ERROR - MQ2 reading out of range\n", &Fil, fil_nm, GPS_data[9]);
+				usart_send(3, "-1,");
+				sd_write("C3H8: ERROR - MQ2 reading out of range\n", &Fil, fil_nm, sd_valid);
 			}
 			else if(C3H8 == -1)
 			{
-				sprintf(buffer, "C3H8: %d ppm \n",0);
-				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
+				sprintf(sd_buff, "C3H8: %d ppm \n",0);
+				usart_send(3, "0,");
+				sd_write(sd_buff, &Fil, fil_nm, sd_valid);
 			}
 			else
 			{
-				sprintf(buffer, "C3H8: %d ppm \n",ppm2[C3H8]);
+				sprintf(sd_buff, "C3H8: %d ppm \n",ppm2[C3H8]);
+				sprintf(buffer, "%d,", ppm2[C3H8]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
+				sd_write(sd_buff, &Fil, fil_nm, sd_valid);
 			}
 			CH4 = read_MQ5();
 			if(CH4 < -1)
 			{
-				usart_send(3, "CH4 : ERROR - MQ5 reading out of range\n");
-				sd_write("CH4 : ERROR - MQ5 reading out of range\n", &Fil, fil_nm, GPS_data[9]);
+				usart_send(3, "-1,");
+				sd_write("CH4 : ERROR - MQ5 reading out of range\n", &Fil, fil_nm, sd_valid);
 			}
 			else if(CH4 == -1)
 			{
-				sprintf(buffer, "CH4 : %d ppm \n",0);
-				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
+				sprintf(sd_buff, "CH4 : %d ppm \n",0);
+				usart_send(3, "0,");
+				sd_write(sd_buff, &Fil, fil_nm, sd_valid);
 			}
 			else
 			{
-				sprintf(buffer, "CH4 : %d ppm \n",ppm5[CH4]);
+				sprintf(sd_buff, "CH4 : %d ppm \n",ppm5[CH4]);
+				sprintf(buffer, "%d,", ppm5[CH4]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
+				sd_write(sd_buff, &Fil, fil_nm, sd_valid);
 			}
 			CO = read_MQ7();
 			if(CO < -1)
 			{
-				usart_send(3, "CO  : ERROR - MQ7 reading out of range\n");
-				sd_write("CO  : ERROR - MQ7 reading out of range\n", &Fil, fil_nm, GPS_data[9]);
+				usart_send(3, "-1,");
+				sd_write("CO  : ERROR - MQ7 reading out of range\n", &Fil, fil_nm, sd_valid);
 			}
 			else if(CO == -1)
 			{
-				sprintf(buffer, "CO  : %d ppm \n",0);
-				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
+				sprintf(sd_buff, "CO  : %d ppm \n",0);
+				usart_send(3, "0,");
+				sd_write(sd_buff, &Fil, fil_nm, sd_valid);
 			}
 			else
 			{
-				sprintf(buffer, "CO  : %d ppm \n",ppm7[CO]);
+				sprintf(sd_buff, "CO  : %d ppm \n",ppm7[CO]);
+				sprintf(buffer, "%d,", ppm7[CO]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
+				sd_write(sd_buff, &Fil, fil_nm, sd_valid);
 			}			
 			H2S = read_MQ136();
 			if(H2S < -1)
 			{
-				usart_send(3, "H2S : ERROR - MQ136 reading out of range\n\n");
-				sd_write("H2S : ERROR - MQ136 reading out of range\n\n", &Fil, fil_nm, GPS_data[9]);
+				usart_send(3, "-1\n");
+				sd_write("H2S : ERROR - MQ136 reading out of range\n\n", &Fil, fil_nm, sd_valid);
 			}
 			else if(H2S == -1)
 			{
-				sprintf(buffer, "H2S : %d ppm \n\n",0);
-				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
+				sprintf(sd_buff, "H2S : %d ppm \n\n",0);
+				usart_send(3, "0\n");
+				sd_write(sd_buff, &Fil, fil_nm, sd_valid);
 			}
 			else
 			{
-				sprintf(buffer, "H2S : %d ppm \n\n",ppm136[H2S]);
+				sprintf(sd_buff, "H2S : %d ppm \n\n",ppm136[H2S]);
+				sprintf(buffer, "%d\n", ppm136[H2S]);
 				usart_send(3, buffer);
-				sd_write(buffer, &Fil, fil_nm, GPS_data[9]);
+				sd_write(sd_buff, &Fil, fil_nm, sd_valid);
 			}
 		}
 	}
 	return 0;
 }
 
-void sd_write(char* buffer, FIL* Fil, char* fil_nm, int fix)
+int sd_write(char* buffer, FIL* Fil, char* fil_nm, int valid)
 {
-	if(fix == 1)
+	FRESULT fr;
+	UINT bw;
+	if(valid == 1)
 	{
-		FRESULT fr;
-		UINT bw;
 		fr = f_open(Fil, fil_nm, FA_WRITE | FA_OPEN_ALWAYS);	/* Create a file */
 		if(fr)
-			usart_send(3, "\nERROR: Unable to write to SD card\n");
+			return 1;
 		f_lseek(Fil, f_size(Fil));
 		f_write(Fil, buffer, strlen(buffer), &bw);
 		f_close(Fil);								/* Close the file */
 	}
+	return 0;
 }
 
 int read_temp()
@@ -1176,7 +1199,7 @@ void strclr(char* s)
 void init_GPS()
 {
 	usart_send(1,"$PGCMD,33,0*6D\r\n");
-	usart_send(1,"$PMTK220,1000*1F\r\n");
+	usart_send(1,"$PMTK220,500*2B\r\n");
 	usart_send(1,"$PMTK314,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*29\r\n");
 	return;
 }
