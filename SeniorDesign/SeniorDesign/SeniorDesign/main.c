@@ -45,6 +45,11 @@ ISR(USART1_RX_vect)
 	rec_GPS_flag = 1;
 }
 
+ISR(USART3_RX_vect)
+{
+	int x = 0;
+}
+
 ISR(TIMER1_OVF_vect)
 {
 	ov_flag = 1;
@@ -699,6 +704,7 @@ int main(void)
 	init_GPS();
 	F = 0;
 	int f_num = 0;
+	char tick = 10;
 	char sd_valid = 0;
 	f_mount(&FatFs, "", 0);		/* Give a work area to the default drive */
 	sei();
@@ -718,6 +724,7 @@ int main(void)
 		{
 			rec_dylos_flag = 0;
 			new_dylos_data = 1;
+			tick = 0;
 			if(rec_dylos[strlen(rec_dylos) - 1] == '\n')
 			{
 				dylos_line = 1;
@@ -753,6 +760,7 @@ int main(void)
 		if(ov_flag == 1)
 		{
 			ov_flag = 0;
+			tick++;
 			if(new_GPS_data == 1)
 			{
 				if(GPS_data[9] == 1)
@@ -771,10 +779,10 @@ int main(void)
 			}
 			else
 				usart_send(3,"00:00:00,0,0.0,0,0.0,0.0,");
-			if(new_dylos_data == 1)
+			if(new_dylos_data == 1 || tick < 8)
 			{
 				sprintf(sd_buff, "Small: %d\n Large: %d\n", dylos_data[0], dylos_data[1]);
-				sprintf(buffer, "%d,%d", dylos_data[0], dylos_data[1]);
+				sprintf(buffer, "%d,%d,", dylos_data[0], dylos_data[1]);
 				usart_send(3, buffer);
 				sd_write(sd_buff, &Fil, fil_nm, sd_valid);
 				new_dylos_data = 0;
